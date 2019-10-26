@@ -15,7 +15,7 @@ class VGG19(object):
     def relu(self,input,alpha = 0.2):
         return tf.maximum(input,alpha * input)
 
-    def vggnet(self,inputs):
+    def __call__(self,inputs):
         inputs = tf.reverse(inputs, [-1]) - np.array([103.939, 116.779, 123.68])
         ### (256,256,3)
         inputs = self.relu(self.conv(inputs, self.para["conv1_1"][0], self.para["conv1_1"][1]))
