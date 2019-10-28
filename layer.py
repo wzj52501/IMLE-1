@@ -39,7 +39,7 @@ def fc(input, output_channels, name=None, use_bias=False,
     weight_shape = [input_shape[-1], output_channels]
     with tf.variable_scope(name):
         weight = tf.get_variable('weight', shape=weight_shape, initializer=initializer)
-        _fc = tf.matmul(input)
+        _fc = tf.matmul(input,weight)
         if (use_bias):
             bias = tf.get_variable('bias', shape=weight_shape[-1], initializer=tf.constant_initializer(0.))
             _fc = tf.nn.bias_add(_fc, bias)
