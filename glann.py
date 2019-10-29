@@ -163,9 +163,6 @@ class GLANN(op_base):
         g_opt = tf.train.AdamOptimizer(lr)
         t_opt = tf.train.AdamOptimizer(lr)
 
-        ## init
-        self.init_sess(self.sess,[tf.global_variables_initializer(),tf.local_variables_initializer()])
-
         ## graph
         t_mix_grads = []
         g_mix_grads = []
@@ -204,6 +201,9 @@ class GLANN(op_base):
         t_group = tf.group(t_grad_op,t_var_op)
         g_group = tf.group(g_grad_op,g_var_op)
 
+        ## init
+        self.init_sess(self.sess,[tf.global_variables_initializer(),tf.local_variables_initializer()])
+
         ## summary init
         summary_writer = tf.summary.FileWriter(self.summary_dir, self.sess.graph)
         summary_op = tf.summary.merge(self.summaries)
@@ -219,8 +219,10 @@ class GLANN(op_base):
         if(need_train):
             try:
                 while not coord.should_stop():
+                    print('start %s' % step)
                     _t, _g = self.sess.run([t_group,g_group])
                 if(step % 10 == 0):
+                    
                     print('update summary')
                     summary_str = self.sess.run(summary_op)
                     summary_writer.add_summary(summary_str,step)
