@@ -222,7 +222,7 @@ class GLANN(op_base):
                     print('start %s' % step)
                     _t, _g = self.sess.run([t_group,g_group])
                 if(step % 10 == 0):
-                    
+
                     print('update summary')
                     summary_str = self.sess.run(summary_op)
                     summary_writer.add_summary(summary_str,step)
