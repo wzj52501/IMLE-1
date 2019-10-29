@@ -67,7 +67,7 @@ class GLANN(op_base):
     def minimizer_z(self,input_z,n_group):
         n_group_shape = n_group.get_shape().as_list()
         z_pad = tf.expand_dims(input_z,axis = 1)
-        pad_top = (self.n_deep - 1) // 2
+        pad_top = self.n_deep // 2
         pad_bottom = self.n_deep - 1 - pad_top
         z_pad = tf.pad(z_pad,[[0,0],[pad_top, pad_bottom],[0,0]],"SYMMETRIC")
         loss = tf.reduce_sum( tf.square(z_pad - n_group) , axis = -1)
