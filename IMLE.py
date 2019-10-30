@@ -7,7 +7,7 @@ from op_base import op_base
 from util import *
 
 
-class GLANN(op_base):
+class IMLE(op_base):
     def __init__(self,args,sess):
         op_base.__init__(self,args)
         self.sess = sess
@@ -19,26 +19,47 @@ class GLANN(op_base):
 
     def G(self,z,name = 'G',is_training = True):
         with tf.variable_scope(name,reuse = tf.AUTO_REUSE):
-            x = ly.fc(z,32*32*128,name = 'G_fc_0')
-            x = ly.batch_normal(x,name = 'G_bn_0',is_training = is_training)
+            # x = ly.fc(z,32*32*128,name = 'G_fc_0')
+            x = ly.fc(z,8*8*32,name = 'G_fc_0')
+            x = tf.reshape(x, shape=[-1, 8, 8, 32])
+
+
+            x = ly.conv2d(x, 32, name='G_conv2d_0') ### 8, 8, 32
+            x = ly.batch_normal(x, name='G_bn_0', is_training=is_training)
             x = ly.relu(x)
 
-            x = tf.reshape(x,shape = [self.batch_size, 32, 32, 128])
-            x = ly.conv2d(x,128,name = 'G_conv2d_0')
-            x = ly.batch_normal(x,name = 'G_bn_1',is_training = is_training)
+
+            x = ly.conv2d(x, 64, name='G_conv2d_1') ### 8, 8, 64
+            x = ly.batch_normal(x, name='G_bn_1', is_training=is_training)
             x = ly.relu(x)
 
-            x = ly.deconv2d(x,64,name = 'G_deconv2d_0')
-            x = ly.batch_normal(x,name = 'G_bn_2',is_training = is_training)
+            x = ly.conv2d(x, 128, name='G_conv2d_2') ### 8, 8, 128
+            x = ly.batch_normal(x, name='G_bn_2', is_training=is_training)
             x = ly.relu(x)
 
-            x = ly.deconv2d(x,32,name = 'G_deconv2d_1')
-            x = ly.batch_normal(x,name = 'G_bn_3',is_training = is_training)
+            x = ly.conv2d(x, 256, name='G_conv2d_3') ### 8, 8, 256
+            x = ly.batch_normal(x, name='G_bn_3', is_training=is_training)
             x = ly.relu(x)
 
-            ### (256,256,3)
-            x = ly.deconv2d(x,3,name = 'G_deconv2d_2')
+            x = ly.deconv2d(x,128,name = 'G_deconv2d_0') ### 16,16, 128
             x = ly.batch_normal(x,name = 'G_bn_4',is_training = is_training)
+            x = ly.relu(x)
+
+            x = ly.deconv2d(x,64,name = 'G_deconv2d_1') ### 32,32, 64
+            x = ly.batch_normal(x,name = 'G_bn_5',is_training = is_training)
+            x = ly.relu(x)
+
+            x = ly.deconv2d(x,32,name = 'G_deconv2d_2') ### 64,64,32
+            x = ly.batch_normal(x,name = 'G_bn_6',is_training = is_training)
+            x = ly.relu(x)
+
+            x = ly.deconv2d(x,16,name = 'G_deconv2d_3') ### 128,128,16
+            x = ly.batch_normal(x,name = 'G_bn_7',is_training = is_training)
+            x = ly.relu(x)
+
+
+            x = ly.deconv2d(x,3,name = 'G_deconv2d_4') ### (256,256,3)
+            x = ly.batch_normal(x,name = 'G_bn_8',is_training = is_training)
             x = tf.nn.tanh(x)
 
             return x
@@ -74,8 +95,6 @@ class GLANN(op_base):
         min_loss = tf.reduce_min(loss,axis = -1)
         min_arg = tf.argmin(loss,axis = -1)
 
-
-
         def add_twice_dim(mix_data):
             data, index = mix_data[0], mix_data[1]
             return data[index, :], index
@@ -102,29 +121,37 @@ class GLANN(op_base):
         return average_list
 
 
-    def graph(self,label,g_opt = None, t_opt = None,is_training = True):
-
-        # self.input_z = tf.placeholder(tf.float32,shape = [self.batch_size,self.input_deep])
-        # self.input_n = tf.placeholder(tf.float32,shape = [self.batch_size,self.n_deep,self.n_dim])
+    # def graph(self,label,g_opt = None, t_opt = None,is_training = True):
         #
-        # self.label = tf.placeholder(tf.float32,shape = [self.batch_size,self.image_height,self.image_weight,self.channels])
-        # self.output = tf.placeholder(tf.float32,shape = [self.batch_size,self.image_height,self.image_weight,self.channels])
+        # input_z = tf.random_normal(shape = [self.batch_size,self.input_deep],mean = 0.,stddev = 0.2)
+        # input_n = tf.random_normal(shape = [self.batch_size,self.n_deep,self.n_dim],mean = 0.,stddev = 0.2)
+        #
+        # T_n = self.T(input_n,'T',is_training = is_training)
+        # min_n,min_n_loss = self.minimizer_z(input_z,T_n)
+        # t_loss = tf.reduce_sum(min_n_loss)
+        #
+        # fake = self.G(min_n,'G',is_training = is_training)
+        # vgg = VGG19()
+        # vgg_loss = tf.reduce_mean(vgg(fake) - vgg(label))
+        #
+        # t_grad = t_opt.compute_gradients(t_loss, self.get_vars('T'))
+        # g_grad = g_opt.compute_gradients(vgg_loss, self.get_vars('G'))
+        #
+        # return t_loss, t_grad, vgg_loss, g_grad
 
-        input_z = tf.random_normal(shape = [self.batch_size,self.input_deep],mean = 0.,stddev = 0.2)
-        input_n = tf.random_normal(shape = [self.batch_size,self.n_deep,self.n_dim],mean = 0.,stddev = 0.2)
+    def graph(self,label,g_opt):
+        input_z = tf.random_normal(shape=[self.batch_size, self.input_deep], mean=0., stddev=0.2)
+        fake = self.G(input_z,'G',is_training = is_training)
+        def minest_fake(one_real_image):
+            cell_image = tf.expands_dim(one_real_image,axis = 0)
+            mix_image = tf.concat([ cell_image for i in range(self.batch_size) ],axis = 0)
+            minest_index = tf.argmin( tf.reduce_sum(tf.suqare(mix_image - fake ),axis = [1,2,3]), axis = -1 ) ## index
+            return fake[minest_index]
+        min_fake = tf.map_fn(minest_fake , label)
+        g_loss = tf.reduce_sum( tf.reduce_mean( tf.suqare(min_fake - label), axis = [1,2,3] ))
 
-        T_n = self.T(input_n,'T',is_training = is_training)
-        min_n,min_n_loss = self.minimizer_z(input_z,T_n)
-        t_loss = tf.reduce_sum(min_n_loss)
-
-        fake = self.G(min_n,'G',is_training = is_training)
-        vgg = VGG19()
-        vgg_loss = tf.reduce_mean(vgg(fake) - vgg(label))
-
-        t_grad = t_opt.compute_gradients(t_loss, self.get_vars('T'))
         g_grad = g_opt.compute_gradients(vgg_loss, self.get_vars('G'))
-
-        return t_loss, t_grad, vgg_loss, g_grad
+        return g_loss, g_grad
 
     def make_data_queue(self):
         images_label, image_names = load_image(self)
@@ -147,8 +174,8 @@ class GLANN(op_base):
         ## lr
         global_steps = tf.get_variable(name='global_step', shape=[], initializer=tf.constant_initializer(0),
                                        trainable=False)
-        decay_change_batch_num = 350.0
-        train_data_num = 3000 * self.epoch
+        decay_change_batch_num = 200.0
+        train_data_num = 2000 * self.epoch
         decay_steps = (train_data_num / self.batch_size / self.gpu_nums) * decay_change_batch_num
 
         lr = tf.train.exponential_decay(self.lr,
@@ -161,44 +188,34 @@ class GLANN(op_base):
 
         ## opt
         g_opt = tf.train.AdamOptimizer(lr)
-        t_opt = tf.train.AdamOptimizer(lr)
 
         ## graph
-        t_mix_grads = []
         g_mix_grads = []
-        t_loss_mix = []
-        vgg_loss_mix = []
+        g_loss_mix = []
         for i in range(self.gpu_nums):
             with tf.device('%s:%s' %( self.train_utils,i) ):
                 with tf.name_scope('distributed_%s' % i):
-                    t_loss, t_grad, vgg_loss, g_grad = self.graph(label_image, g_opt = g_opt, t_opt = t_opt)
-                    t_mix_grads.append(t_grad)
-                    t_loss_mix.append(t_loss)
+                    g_loss, g_grad = self.graph(label_image, g_opt = g_opt)
                     g_mix_grads.append(g_grad)
-                    vgg_loss_mix.append(vgg_loss)
+                    g_loss_mix.append(g_loss)
 
                     # tf.get_variable_scope().reuse_variables()
 
         ### loss
-        t_ave_loss = tf.reduce_mean(t_loss_mix,axis = 0)
-        vgg_ave_loss = tf.reduce_mean(vgg_loss_mix,axis = 0)
-        self.summaries.append(tf.summary.scalar('t_loss',t_ave_loss))
-        self.summaries.append(tf.summary.scalar('vgg_loss',vgg_ave_loss))
+        g_ave_loss = tf.reduce_mean(g_loss_mix,axis = 0)
+        self.summaries.append(tf.summary.scalar('g_loss',g_ave_loss))
 
         ### grad_op
-        t_ave_grad, g_ave_grad = self.average_gradients(t_mix_grads) , self.average_gradients(g_mix_grads)
+        g_ave_grad = self.average_gradients(g_mix_grads)
 
-        t_grad_op, g_grad_op = t_opt.apply_gradients(t_ave_grad,global_step=global_steps),  g_opt.apply_gradients(g_ave_grad,global_step=global_steps)
+        g_grad_op = g_opt.apply_gradients(g_ave_grad,global_step=global_steps)
 
         ### variable_op
         MOVING_AVERAGE_DECAY = 0.9
-        t_variable_average = tf.train.ExponentialMovingAverage(MOVING_AVERAGE_DECAY)
         g_variable_average = tf.train.ExponentialMovingAverage(MOVING_AVERAGE_DECAY)
 
-        t_var_op = t_variable_average.apply(self.get_vars('T'))
         g_var_op = t_variable_average.apply(self.get_vars('G'))
 
-        t_group = tf.group(t_grad_op,t_var_op)
         g_group = tf.group(g_grad_op,g_var_op)
 
         ## init
@@ -220,7 +237,7 @@ class GLANN(op_base):
             try:
                 while not coord.should_stop():
                     print('start %s' % step)
-                    _t, _g = self.sess.run([t_group,g_group])
+                    _g = self.sess.run([g_group])
                 if(step % 10 == 0):
 
                     print('update summary')

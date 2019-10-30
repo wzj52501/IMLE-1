@@ -1,5 +1,5 @@
 import tensorflow as tf
-from glann import GLANN
+from IMLE import IMLE
 import argparse
 import sys
 
@@ -17,7 +17,7 @@ parser.add_argument("-ndeep", "--n_deep", type=int, default=64)
 parser.add_argument("-ndim", "--n_dim", type=int, default=64)
 parser.add_argument("-inh", "--image_height", type=int, default=256)
 parser.add_argument("-inw", "--image_weight", type=int, default=256)
-parser.add_argument("-ind", "--input_deep", type=int, default=64)
+parser.add_argument("-ind", "--input_deep", type=int, default=2048)
 parser.add_argument("-e", "--epoch", type=int, default=1)
 parser.add_argument("-gn", "--gpu_nums", type=int, default=2)
 parser.add_argument("-tu", "--train_utils", type=str, default='gpu')
@@ -35,5 +35,5 @@ if __name__ == '__main__':
     config.gpu_options.allow_growth = True
 
     with tf.Session(config = config) as sess:
-        model = GLANN(args,sess)
+        model = IMLE(args,sess)
         model.main()
