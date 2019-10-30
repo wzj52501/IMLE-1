@@ -7,8 +7,14 @@ import numpy as np
 def rgb_float(image_content):
     return image_content / 127.5 - 1
 
-def load_image(self):
-    image_dir_name = os.path.join('data','random_faces')
+def float_rgb(image_content):
+    return (image_content + 1) * 127.5
+
+def load_image(self,eval = False):
+    if(eval):
+        image_dir_name = os.path.join('data','eval_faces')
+    else:
+        image_dir_name = os.path.join('data','random_faces')
     image_list = os.listdir(image_dir_name)
     image_content = []
     image_name = []
@@ -22,4 +28,12 @@ def load_image(self):
 
     return rgb_float(np.array(image_content)), image_name
 
+def make_image(input,name_list):
+    write_dir = 'eval'
+    image_content = float_rgb(input).astype(np.uint8)
+    index = 0
+    for cell in image_content:
+        print(name_list[index].decode())
+        cv2.imwrite(os.path.join(write_dir,name_list[index].decode()), cell)
+        index += 1
 

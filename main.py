@@ -18,12 +18,12 @@ parser.add_argument("-ndim", "--n_dim", type=int, default=64)
 parser.add_argument("-inh", "--image_height", type=int, default=256)
 parser.add_argument("-inw", "--image_weight", type=int, default=256)
 parser.add_argument("-ind", "--input_deep", type=int, default=2048)
-parser.add_argument("-e", "--epoch", type=int, default=1000)
+parser.add_argument("-e", "--epoch", type=int, default=100000)
 parser.add_argument("-gn", "--gpu_nums", type=int, default=2)
 parser.add_argument("-tu", "--train_utils", type=str, default='gpu')
-
-# Train Parameter
 parser.add_argument("-l", "--lr", type=float, default=1e-4)
+
+parser.add_argument("-ac", "--action", type=str, default='test')
 
 
 
@@ -36,4 +36,7 @@ if __name__ == '__main__':
 
     with tf.Session(config = config) as sess:
         model = IMLE(args,sess)
-        model.main()
+        if(args.action == 'train'):
+            model.train()
+        elif(args.action == 'test'):
+            model.eval()

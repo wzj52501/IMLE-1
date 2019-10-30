@@ -137,9 +137,12 @@ class IMLE(op_base):
         #
         # return t_loss, t_grad, vgg_loss, g_grad
 
-    def graph(self,label,g_opt,is_training = True):
+    def graph(self,label,label_name,g_opt,is_training = True):
         input_z = tf.random_normal(shape=[self.batch_size, self.input_deep], mean=0., stddev=0.2)
         fake = self.G(input_z,'G',is_training = is_training)
+        if(not is_training):
+            self.eval_fake = fake
+            self.eval_name = label_name
         def minest_fake(one_real_image):
             cell_image = tf.expand_dims(one_real_image,axis = 0)
             mix_image = tf.concat([ cell_image for i in range(self.batch_size) ],axis = 0)
@@ -151,9 +154,8 @@ class IMLE(op_base):
         g_grad = g_opt.compute_gradients(g_loss, self.get_vars('G'))
         return g_loss, g_grad
 
-    def make_data_queue(self):
-        images_label, image_names = load_image(self)
-
+    def make_data_queue(self,eval = False):
+        images_label, image_names = load_image(self,eval = eval)
         input_queue = tf.train.slice_input_producer([images_label, image_names], num_epochs=self.epoch, shuffle=False)
         label, name = tf.train.batch(input_queue, batch_size=self.batch_size, num_threads=2,
                                       capacity=64,
@@ -161,13 +163,17 @@ class IMLE(op_base):
 
         return label, name
 
-    def main(self):
+    def train(self):
         label, name = self.make_data_queue()
-        self.start(label,name)
+        self.start(label,name,pre_train = True)
+
+    def eval(self):
+        self.epoch = 1
+        label, name = self.make_data_queue(eval = True)
+        self.start(label, name,need_train = False)
 
 
-
-    def start(self,label_image,label_name,need_train = True):
+    def start(self,label_image,label_name,need_train = True,pre_train = False):
 
         ## lr
         global_steps = tf.get_variable(name='global_step', shape=[], initializer=tf.constant_initializer(0),
@@ -193,7 +199,7 @@ class IMLE(op_base):
         for i in range(self.gpu_nums):
             with tf.device('%s:%s' %( self.train_utils,i) ):
                 with tf.name_scope('distributed_%s' % i):
-                    g_loss, g_grad = self.graph(label_image, g_opt = g_opt)
+                    g_loss, g_grad = self.graph(label_image,label_name, g_opt = g_opt,is_training = need_train)
                     g_mix_grads.append(g_grad)
                     g_loss_mix.append(g_loss)
 
@@ -211,6 +217,7 @@ class IMLE(op_base):
         ### variable_op
         MOVING_AVERAGE_DECAY = 0.9
         g_variable_average = tf.train.ExponentialMovingAverage(MOVING_AVERAGE_DECAY)
+        # self.get_vars('G') = g_variable_average.average(self.get_vars('G'))
 
         g_var_op = g_variable_average.apply(self.get_vars('G'))
 
@@ -232,6 +239,9 @@ class IMLE(op_base):
         step = 1
         print('start train')
         if(need_train):
+            if(pre_train):
+                saver.restore(self.sess, tf.train.latest_checkpoint(self.model_save_path))
+                print('restore success')
             try:
                 while not coord.should_stop():
                     print('start %s' % step)
@@ -250,8 +260,27 @@ class IMLE(op_base):
             finally:
                 coord.request_stop()
 
-        coord.join(thread)
-        print('thread break')
+            coord.join(thread)
+            print('thread break')
+
+        if(not need_train):
+            saver.restore(self.sess, tf.train.latest_checkpoint(self.model_save_path))
+            print('restore success')
+            try:
+                while not coord.should_stop():
+                    print('start %s' % step)
+                    _fake, _eval_name = self.sess.run([self.eval_fake,self.eval_name])
+                    make_image(_fake,_eval_name)
+
+            except tf.errors.OutOfRangeError:
+                print('finish thread')
+            finally:
+                coord.request_stop()
+
+            coord.join(thread)
+            print('thread break')
+
+
 
 
 
