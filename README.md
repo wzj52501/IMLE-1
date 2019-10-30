@@ -1,8 +1,6 @@
 # IMLE
-(Updating)
 
 ## Environment
-
 * TensorFlow 1.12.0
 * Python 3.6.0
 
