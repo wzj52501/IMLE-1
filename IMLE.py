@@ -2,7 +2,6 @@ import tensorflow as tf
 import numpy as np
 import os
 import layer as ly
-from vgg19 import VGG19
 from op_base import op_base
 from util import *
 

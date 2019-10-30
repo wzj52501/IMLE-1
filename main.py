@@ -2,6 +2,7 @@ import tensorflow as tf
 from IMLE import IMLE
 import argparse
 import sys
+import os
 
 
 parser = argparse.ArgumentParser()
@@ -25,10 +26,13 @@ parser.add_argument("-l", "--lr", type=float, default=1e-4)
 
 parser.add_argument("-ac", "--action", type=str, default='test')
 
-
-
 args = parser.parse_args()
 # os.environ["CUDA_VISIBLE_DEVICES"] = gpu_num
+
+dir_names = ['eval','logs','model','data']
+for dir in dir_names:
+    if(not os.path.exists(dir)):
+        os.mkdir(dir)
 
 if __name__ == '__main__':
     config = tf.ConfigProto(allow_soft_placement=True)
