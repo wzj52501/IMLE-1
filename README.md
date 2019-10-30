@@ -1,4 +1,4 @@
-# GLANN
+# IMLE
 (Updating)
 
 ## Environment
@@ -25,6 +25,3 @@ python main.py -ac test
 ```
 tensorboard --logdir logs 
 ```
-
-
-
