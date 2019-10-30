@@ -82,27 +82,6 @@ class IMLE(op_base):
 
             return n
 
-
-
-
-    def minimizer_z(self,input_z,n_group):
-        n_group_shape = n_group.get_shape().as_list()
-        z_pad = tf.expand_dims(input_z,axis = 1)
-        pad_top = self.n_deep // 2
-        pad_bottom = self.n_deep - 1 - pad_top
-        z_pad = tf.pad(z_pad,[[0,0],[pad_top, pad_bottom],[0,0]],"SYMMETRIC")
-        loss = tf.reduce_sum( tf.square(z_pad - n_group) , axis = -1)
-        min_loss = tf.reduce_min(loss,axis = -1)
-        min_arg = tf.argmin(loss,axis = -1)
-
-        def add_twice_dim(mix_data):
-            data, index = mix_data[0], mix_data[1]
-            return data[index, :], index
-        min_value = tf.map_fn(add_twice_dim , (n_group,min_arg))[0]
-
-
-        return min_value, min_loss
-
     def get_vars(self, name, scope=None):
         return tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=name)
 
@@ -119,6 +98,25 @@ class IMLE(op_base):
             average_list.append((ave_grad,ave_vars))
 
         return average_list
+
+
+    # def minimizer_z(self,input_z,n_group):
+    #     n_group_shape = n_group.get_shape().as_list()
+    #     z_pad = tf.expand_dims(input_z,axis = 1)
+    #     pad_top = self.n_deep // 2
+    #     pad_bottom = self.n_deep - 1 - pad_top
+    #     z_pad = tf.pad(z_pad,[[0,0],[pad_top, pad_bottom],[0,0]],"SYMMETRIC")
+    #     loss = tf.reduce_sum( tf.square(z_pad - n_group) , axis = -1)
+    #     min_loss = tf.reduce_min(loss,axis = -1)
+    #     min_arg = tf.argmin(loss,axis = -1)
+    #
+    #     def add_twice_dim(mix_data):
+    #         data, index = mix_data[0], mix_data[1]
+    #         return data[index, :], index
+    #     min_value = tf.map_fn(add_twice_dim , (n_group,min_arg))[0]
+    #
+    #
+    #     return min_value, min_loss
 
 
     # def graph(self,label,g_opt = None, t_opt = None,is_training = True):
@@ -139,18 +137,18 @@ class IMLE(op_base):
         #
         # return t_loss, t_grad, vgg_loss, g_grad
 
-    def graph(self,label,g_opt):
+    def graph(self,label,g_opt,is_training = True):
         input_z = tf.random_normal(shape=[self.batch_size, self.input_deep], mean=0., stddev=0.2)
         fake = self.G(input_z,'G',is_training = is_training)
         def minest_fake(one_real_image):
-            cell_image = tf.expands_dim(one_real_image,axis = 0)
+            cell_image = tf.expand_dims(one_real_image,axis = 0)
             mix_image = tf.concat([ cell_image for i in range(self.batch_size) ],axis = 0)
-            minest_index = tf.argmin( tf.reduce_sum(tf.suqare(mix_image - fake ),axis = [1,2,3]), axis = -1 ) ## index
+            minest_index = tf.argmin( tf.reduce_sum(tf.square(mix_image - fake ),axis = [1,2,3]), axis = -1 ) ## index
             return fake[minest_index]
         min_fake = tf.map_fn(minest_fake , label)
-        g_loss = tf.reduce_sum( tf.reduce_mean( tf.suqare(min_fake - label), axis = [1,2,3] ))
+        g_loss = tf.reduce_sum( tf.reduce_mean( tf.square(min_fake - label), axis = [1,2,3] ))
 
-        g_grad = g_opt.compute_gradients(vgg_loss, self.get_vars('G'))
+        g_grad = g_opt.compute_gradients(g_loss, self.get_vars('G'))
         return g_loss, g_grad
 
     def make_data_queue(self):
@@ -214,7 +212,7 @@ class IMLE(op_base):
         MOVING_AVERAGE_DECAY = 0.9
         g_variable_average = tf.train.ExponentialMovingAverage(MOVING_AVERAGE_DECAY)
 
-        g_var_op = t_variable_average.apply(self.get_vars('G'))
+        g_var_op = g_variable_average.apply(self.get_vars('G'))
 
         g_group = tf.group(g_grad_op,g_var_op)
 
