@@ -236,15 +236,14 @@ class IMLE(op_base):
                 while not coord.should_stop():
                     print('start %s' % step)
                     _g = self.sess.run([g_group])
-                if(step % 10 == 0):
-
-                    print('update summary')
-                    summary_str = self.sess.run(summary_op)
-                    summary_writer.add_summary(summary_str,step)
-                if(step % 100 == 0):
-                    print('update model')
-                    saver.save(self.sess,os.path.join(self.model_save_path,'model_%s.ckpt' % step))
-                step += 1
+                    if(step % 10 == 0):
+                        print('update summary')
+                        summary_str = self.sess.run(summary_op)
+                        summary_writer.add_summary(summary_str,step)
+                    if(step % 100 == 0):
+                        print('update model')
+                        saver.save(self.sess,os.path.join(self.model_save_path,'model_%s.ckpt' % step))
+                    step += 1
 
             except tf.errors.OutOfRangeError:
                 print('finish thread')
